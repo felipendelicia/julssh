@@ -17,6 +17,16 @@ Administrador de conexiones SSH para la terminal. Navegable con flechas y Enter.
 
 ## Instalación
 
+### Sin Go (recomendado)
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/felipendelicia/julssh/main/install.sh) --download
+```
+
+Descarga el binario pre-compilado del último [GitHub Release](https://github.com/felipendelicia/julssh/releases). No requiere Go instalado.
+
+### Desde fuente
+
 Requiere Go 1.21+.
 
 ```bash
@@ -25,7 +35,19 @@ cd julssh
 bash install.sh
 ```
 
-Instala en `~/.local/bin/` por defecto. Para instalación global:
+### Desde .deb (Debian/Ubuntu amd64)
+
+Descargá el `.deb` del último [release](https://github.com/felipendelicia/julssh/releases) e instalá:
+
+```bash
+sudo dpkg -i julssh_amd64.deb
+```
+
+Instala en `/usr/local/bin/julssh`.
+
+---
+
+Por defecto instala en `~/.local/bin/`. Para instalación global:
 
 ```bash
 sudo bash install.sh /usr/local/bin
