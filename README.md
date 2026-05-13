@@ -17,42 +17,19 @@ Administrador de conexiones SSH para la terminal. Navegable con flechas y Enter.
 
 ## Instalación
 
-### Opción 1: copiar el binario (recomendada, sin dependencias)
+Requiere Go 1.21+.
 
 ```bash
-git clone <repo>
+git clone https://github.com/felipendelicia/julssh.git
 cd julssh
-go build -o julssh .
-cp julssh ~/.local/bin/
+bash install.sh
 ```
 
-Listo. Desde cualquier terminal:
+Instala en `~/.local/bin/` por defecto. Para instalación global:
 
 ```bash
-julssh
+sudo bash install.sh /usr/local/bin
 ```
-
-### Opción 2: instalar en `/usr/local/bin` (requiere sudo)
-
-```bash
-sudo cp julssh /usr/local/bin/
-```
-
-### Opción 3: `go install`
-
-```bash
-go install github.com/felipem/julssh@latest
-```
-
-> Requiere que `~/go/bin` esté en tu `$PATH`. Agregá esto a tu `.bashrc` o `.zshrc`:
-> ```bash
-> export PATH="$HOME/go/bin:$PATH"
-> ```
-
-## Requisitos
-
-- Linux
-- Go 1.21+ (solo para compilar — el binario no requiere Go instalado)
 
 ## Keybindings
 
