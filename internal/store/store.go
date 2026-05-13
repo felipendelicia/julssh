@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var ErrNotFound = errors.New("connection not found")
+
 type Connection struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
@@ -86,7 +88,7 @@ func (s *Store) Update(c Connection) error {
 			return s.save()
 		}
 	}
-	return nil
+	return ErrNotFound
 }
 
 func (s *Store) Delete(id string) error {
@@ -95,6 +97,9 @@ func (s *Store) Delete(id string) error {
 		if c.ID != id {
 			filtered = append(filtered, c)
 		}
+	}
+	if len(filtered) == len(s.Connections) {
+		return ErrNotFound
 	}
 	s.Connections = filtered
 	return s.save()
