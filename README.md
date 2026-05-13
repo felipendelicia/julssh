@@ -2,7 +2,7 @@
 
 Administrador de conexiones SSH para la terminal. Navegable con flechas y Enter.
 
-*Dedicado a Julieta.*
+*Dedicado a mi hermana Julieta.*
 
 ---
 
