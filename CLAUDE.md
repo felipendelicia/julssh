@@ -79,6 +79,21 @@ main.go
 - Binario: `julssh`
 - No agregar "Co-Authored-By: Claude" ni ninguna firma de AI en los commits
 
+## Roadmap
+
+### v0.2 — Distribución
+- GitHub Releases con binarios pre-compilados (amd64/arm64/darwin) via GoReleaser
+- Paquete `.deb` para Ubuntu/Debian (incluido en el release)
+- Actualizar `install.sh` para descargar binario del release en vez de compilar
+
+### Backlog (a priorizar)
+- Importar conexiones desde `~/.ssh/config`
+- Grupos/carpetas para organizar conexiones
+- Jump hosts / bastion support
+- Port forwarding por conexión
+- Historial: última conexión por entry
+- Export/import JSON (backup y sync entre máquinas)
+
 ## Instalación dev
 
 ```bash
