@@ -1,0 +1,42 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    ldflags: -s -w -X main.version={{.Version}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+nfpms:
+  - package_name: julssh
+    homepage: https://github.com/felipendelicia/julssh
+    description: Gestor TUI de conexiones SSH. Dedicado a mi hermana Julieta.
+    maintainer: Felipe Ndelicia
+    license: MIT
+    formats: [deb]
+    bindir: /usr/local/bin
+    contents:
+      - src: README.md
+        dst: /usr/share/doc/julssh/README.md
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: felipendelicia
+    name: julssh
+  name_template: "v{{ .Version }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ['^docs:', '^chore:']
