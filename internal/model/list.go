@@ -95,7 +95,7 @@ func (m ListModel) handleFilterKey(msg tea.KeyMsg, conns []store.Connection) (te
 func (m ListModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(styles.Title.Render("julssh ♥ Julieta"))
+	b.WriteString(styles.Title.Render("julssh: gestor ssh dedicado a mi hermana Julieta"))
 	b.WriteString("\n\n")
 
 	conns := m.store.Filter(m.filterQuery)
