@@ -17,28 +17,45 @@ const (
 	fieldPort
 	fieldUser
 	fieldIdentityFile
+	fieldDomain
 	fieldDescription
 	fieldTags
 	fieldCount
 )
 
 var fieldLabels = [fieldCount]string{
-	"Nombre", "Host", "Puerto", "Usuario", "Identity File", "Descripción", "Tags",
+	"Nombre", "Host", "Puerto", "Usuario", "Identity File (SSH)", "Dominio (RDP)", "Descripción", "Tags",
 }
 
 var fieldPlaceholders = [fieldCount]string{
-	"Mi servidor", "hostname o IP", "22", "usuario", "~/.ssh/id_ed25519", "opcional", "tag1, tag2",
+	"Mi servidor", "hostname o IP", "", "usuario", "~/.ssh/id_ed25519", "CORP", "opcional", "tag1, tag2",
 }
 
+var portPlaceholders = map[string]string{
+	"ssh": "22",
+	"rdp": "3389",
+	"vnc": "5900",
+}
+
+var defaultPorts = map[string]int{
+	"ssh": 22,
+	"rdp": 3389,
+	"vnc": 5900,
+}
+
+var typeOptions = []string{"ssh", "rdp", "vnc"}
+
 type FormModel struct {
-	fields  [fieldCount]textinput.Model
-	focused int
-	store   *store.Store
-	conn    store.Connection
-	editing bool
-	errMsg  string
-	width   int
-	height  int
+	fields         [fieldCount]textinput.Model
+	focused        int
+	onTypeSelector bool
+	typeIdx        int
+	store          *store.Store
+	conn           store.Connection
+	editing        bool
+	errMsg         string
+	width          int
+	height         int
 }
 
 func NewForm(s *store.Store, conn *store.Connection) FormModel {
@@ -51,11 +68,24 @@ func NewForm(s *store.Store, conn *store.Connection) FormModel {
 	}
 	fields[fieldPort].CharLimit = 5
 
-	m := FormModel{fields: fields, store: s}
+	m := FormModel{
+		fields:         fields,
+		store:          s,
+		onTypeSelector: true,
+	}
+	m.updatePortPlaceholder()
 
 	if conn != nil {
 		m.conn = *conn
 		m.editing = true
+
+		for i, t := range typeOptions {
+			if t == conn.Type {
+				m.typeIdx = i
+				break
+			}
+		}
+
 		fields[fieldName].SetValue(conn.Name)
 		fields[fieldHost].SetValue(conn.Host)
 		if conn.Port != 0 {
@@ -63,13 +93,60 @@ func NewForm(s *store.Store, conn *store.Connection) FormModel {
 		}
 		fields[fieldUser].SetValue(conn.User)
 		fields[fieldIdentityFile].SetValue(conn.IdentityFile)
+		fields[fieldDomain].SetValue(conn.Domain)
 		fields[fieldDescription].SetValue(conn.Description)
 		fields[fieldTags].SetValue(strings.Join(conn.Tags, ", "))
 		m.fields = fields
+		m.onTypeSelector = false
+		m.focused = fieldName
+		m.fields[fieldName].Focus()
 	}
 
-	m.fields[fieldName].Focus()
 	return m
+}
+
+func (m *FormModel) currentType() string {
+	return typeOptions[m.typeIdx]
+}
+
+func (m *FormModel) updatePortPlaceholder() {
+	m.fields[fieldPort].Placeholder = portPlaceholders[m.currentType()]
+}
+
+func (m FormModel) visibleFields() []int {
+	switch m.currentType() {
+	case "rdp":
+		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldDomain, fieldDescription, fieldTags}
+	case "vnc":
+		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldDescription, fieldTags}
+	default:
+		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldIdentityFile, fieldDescription, fieldTags}
+	}
+}
+
+func (m FormModel) nextVisible(current int) int {
+	visible := m.visibleFields()
+	for i, f := range visible {
+		if f == current && i+1 < len(visible) {
+			return visible[i+1]
+		}
+	}
+	return current
+}
+
+func (m FormModel) prevVisible(current int) int {
+	visible := m.visibleFields()
+	for i, f := range visible {
+		if f == current && i > 0 {
+			return visible[i-1]
+		}
+	}
+	return current
+}
+
+func (m FormModel) isLastVisible() bool {
+	visible := m.visibleFields()
+	return len(visible) > 0 && visible[len(visible)-1] == m.focused
 }
 
 func (m FormModel) Init() tea.Cmd {
@@ -84,25 +161,32 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		if m.onTypeSelector {
+			return m.handleTypeSelector(msg)
+		}
 		switch msg.String() {
 		case "esc":
 			return m, func() tea.Msg { return MsgPopView{} }
 
 		case "tab", "enter":
-			if m.focused == fieldCount-1 {
+			if m.isLastVisible() {
 				return m.trySave()
 			}
 			m.fields[m.focused].Blur()
-			m.focused++
+			m.focused = m.nextVisible(m.focused)
 			m.fields[m.focused].Focus()
 			return m, textinput.Blink
 
 		case "shift+tab":
-			if m.focused > 0 {
+			prev := m.prevVisible(m.focused)
+			if prev == m.focused {
 				m.fields[m.focused].Blur()
-				m.focused--
-				m.fields[m.focused].Focus()
+				m.onTypeSelector = true
+				return m, nil
 			}
+			m.fields[m.focused].Blur()
+			m.focused = prev
+			m.fields[m.focused].Focus()
 			return m, textinput.Blink
 		}
 	}
@@ -112,6 +196,26 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m FormModel) handleTypeSelector(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		return m, func() tea.Msg { return MsgPopView{} }
+	case "space", "right", "l":
+		m.typeIdx = (m.typeIdx + 1) % len(typeOptions)
+		m.updatePortPlaceholder()
+	case "left", "h":
+		m.typeIdx = (m.typeIdx - 1 + len(typeOptions)) % len(typeOptions)
+		m.updatePortPlaceholder()
+	case "tab", "enter":
+		m.onTypeSelector = false
+		visible := m.visibleFields()
+		m.focused = visible[0]
+		m.fields[m.focused].Focus()
+		return m, textinput.Blink
+	}
+	return m, nil
+}
+
 func (m FormModel) trySave() (tea.Model, tea.Cmd) {
 	host := strings.TrimSpace(m.fields[fieldHost].Value())
 	if host == "" {
@@ -119,8 +223,9 @@ func (m FormModel) trySave() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	connType := m.currentType()
 	portStr := strings.TrimSpace(m.fields[fieldPort].Value())
-	port := 22
+	port := defaultPorts[connType]
 	if portStr != "" {
 		p, err := strconv.Atoi(portStr)
 		if err != nil || p < 1 || p > 65535 {
@@ -140,11 +245,13 @@ func (m FormModel) trySave() (tea.Model, tea.Cmd) {
 
 	conn := store.Connection{
 		ID:           m.conn.ID,
+		Type:         connType,
 		Name:         strings.TrimSpace(m.fields[fieldName].Value()),
 		Host:         host,
 		Port:         port,
 		User:         strings.TrimSpace(m.fields[fieldUser].Value()),
 		IdentityFile: strings.TrimSpace(m.fields[fieldIdentityFile].Value()),
+		Domain:       strings.TrimSpace(m.fields[fieldDomain].Value()),
 		Description:  strings.TrimSpace(m.fields[fieldDescription].Value()),
 		Tags:         tags,
 	}
@@ -173,10 +280,35 @@ func (m FormModel) View() string {
 	b.WriteString(styles.Title.Render(title))
 	b.WriteString("\n\n")
 
+	typeLine := ""
+	for i, t := range typeOptions {
+		label := strings.ToUpper(t)
+		if i == m.typeIdx {
+			if m.onTypeSelector {
+				label = styles.ActiveInput.Render("[ " + label + " ]")
+			} else {
+				label = styles.Tag.Render(label)
+			}
+		} else {
+			label = styles.InactiveInput.Render("  " + label + "  ")
+		}
+		typeLine += label + " "
+	}
+	b.WriteString(styles.FieldLabel.Render("Tipo:") + "  " + typeLine + "\n\n")
+
+	visible := m.visibleFields()
+	visibleSet := make(map[int]bool, len(visible))
+	for _, f := range visible {
+		visibleSet[f] = true
+	}
+
 	for i := range m.fields {
+		if !visibleSet[i] {
+			continue
+		}
 		label := styles.FieldLabel.Render(fieldLabels[i] + ":")
 		var input string
-		if i == m.focused {
+		if !m.onTypeSelector && i == m.focused {
 			input = styles.ActiveInput.Render(m.fields[i].View())
 		} else {
 			input = styles.InactiveInput.Render(m.fields[i].View())
@@ -190,7 +322,7 @@ func (m FormModel) View() string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(styles.Footer.Render("[Tab/Enter]siguiente  [Shift+Tab]anterior  [Enter en Tags]guardar  [Esc]cancelar"))
+	b.WriteString(styles.Footer.Render("[Space/←/→]tipo  [Tab/Enter]siguiente  [Shift+Tab]anterior  [Esc]cancelar"))
 
 	return b.String()
 }
