@@ -79,6 +79,10 @@ func (a AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case rdp.MsgRDPLaunched:
 		if msg.Err != nil {
+			if msg.Bin != "" {
+				a.stack = append(a.stack, NewInstallView(msg.Bin, msg.Pkg, msg.RetryCmd))
+				return a, nil
+			}
 			a.statusMsg = "rdp: " + msg.Err.Error()
 			a.statusOK = false
 			return a, clearStatusCmd()
@@ -87,6 +91,10 @@ func (a AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case vnc.MsgVNCLaunched:
 		if msg.Err != nil {
+			if msg.Bin != "" {
+				a.stack = append(a.stack, NewInstallView(msg.Bin, msg.Pkg, msg.RetryCmd))
+				return a, nil
+			}
 			a.statusMsg = "vnc: " + msg.Err.Error()
 			a.statusOK = false
 			return a, clearStatusCmd()

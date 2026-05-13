@@ -8,12 +8,22 @@ import (
 	"github.com/felipem/julssh/internal/store"
 )
 
-type MsgRDPLaunched struct{ Err error }
+type MsgRDPLaunched struct {
+	Err      error
+	Bin      string   // set when client binary not found
+	Pkg      string   // apt package to install
+	RetryCmd tea.Cmd  // retry after install
+}
 
 func Connect(c store.Connection) tea.Cmd {
 	return func() tea.Msg {
 		if _, err := exec.LookPath("xfreerdp"); err != nil {
-			return MsgRDPLaunched{Err: fmt.Errorf("xfreerdp no encontrado — instalá freerdp2-x11")}
+			return MsgRDPLaunched{
+				Err:      fmt.Errorf("xfreerdp no encontrado"),
+				Bin:      "xfreerdp",
+				Pkg:      "freerdp2-x11",
+				RetryCmd: Connect(c),
+			}
 		}
 		cmd := exec.Command("xfreerdp", buildArgs(c)...)
 		if err := cmd.Start(); err != nil {
