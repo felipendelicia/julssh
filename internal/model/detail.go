@@ -5,9 +5,11 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/felipem/julssh/internal/rdp"
 	"github.com/felipem/julssh/internal/ssh"
 	"github.com/felipem/julssh/internal/store"
 	"github.com/felipem/julssh/internal/styles"
+	"github.com/felipem/julssh/internal/vnc"
 )
 
 type DetailModel struct {
@@ -51,9 +53,20 @@ func (m DetailModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.confirming = true
 		return m, nil
 	case "c":
-		return m, ssh.Connect(m.conn)
+		return m, connectCmd(m.conn)
 	}
 	return m, nil
+}
+
+func connectCmd(c store.Connection) tea.Cmd {
+	switch c.Type {
+	case "rdp":
+		return rdp.Connect(c)
+	case "vnc":
+		return vnc.Connect(c)
+	default:
+		return ssh.Connect(c)
+	}
 }
 
 func (m DetailModel) handleConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -72,7 +85,8 @@ func (m DetailModel) handleConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m DetailModel) View() string {
 	var b strings.Builder
 
-	b.WriteString(styles.Title.Render(m.conn.Name))
+	typeLabel := strings.ToUpper(m.conn.Type)
+	b.WriteString(styles.Title.Render(m.conn.Name + "  " + styles.Tag.Render(typeLabel)))
 	b.WriteString("\n")
 	b.WriteString(styles.MutedText.Render(strings.Repeat("─", 40)))
 	b.WriteString("\n\n")
@@ -86,12 +100,20 @@ func (m DetailModel) View() string {
 	}
 
 	host := m.conn.Host
-	if m.conn.Port != 0 && m.conn.Port != 22 {
+	defaultPort := map[string]int{"ssh": 22, "rdp": 3389, "vnc": 5900}
+	if m.conn.Port != 0 && m.conn.Port != defaultPort[m.conn.Type] {
 		host = fmt.Sprintf("%s:%d", m.conn.Host, m.conn.Port)
 	}
 	field("Host", host)
 	field("Usuario", m.conn.User)
-	field("Identity File", m.conn.IdentityFile)
+
+	switch m.conn.Type {
+	case "ssh":
+		field("Identity File", m.conn.IdentityFile)
+	case "rdp":
+		field("Dominio", m.conn.Domain)
+	}
+
 	field("Descripción", m.conn.Description)
 	if len(m.conn.Tags) > 0 {
 		tags := ""
