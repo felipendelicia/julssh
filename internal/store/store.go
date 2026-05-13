@@ -20,8 +20,10 @@ type Connection struct {
 	Port         int       `json:"port"`
 	User         string    `json:"user"`
 	IdentityFile string    `json:"identity_file"`
+	Domain       string    `json:"domain"`
 	Description  string    `json:"description"`
 	Tags         []string  `json:"tags"`
+	Type         string    `json:"type"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -53,6 +55,11 @@ func Load(path string) (*Store, error) {
 	}
 	if f.Connections != nil {
 		s.Connections = f.Connections
+	}
+	for i := range s.Connections {
+		if s.Connections[i].Type == "" {
+			s.Connections[i].Type = "ssh"
+		}
 	}
 	return s, nil
 }
@@ -120,7 +127,7 @@ func (s *Store) Filter(query string) []Connection {
 }
 
 func matchesQuery(c Connection, q string) bool {
-	fields := []string{c.Name, c.Host, c.User, c.IdentityFile, c.Description}
+	fields := []string{c.Name, c.Host, c.User, c.IdentityFile, c.Description, c.Type, c.Domain}
 	for _, f := range fields {
 		if strings.Contains(strings.ToLower(f), q) {
 			return true

@@ -95,3 +95,44 @@ func TestFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestTypeMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.json")
+	s, _ := Load(path)
+	s.Add(Connection{Name: "legacy", Host: "h1", Port: 22})
+	// simulate legacy JSON without type
+	s.Connections[0].Type = ""
+	if err := s.save(); err != nil {
+		t.Fatal(err)
+	}
+	s2, _ := Load(path)
+	if s2.Connections[0].Type != "ssh" {
+		t.Errorf("expected type 'ssh' after migration, got %q", s2.Connections[0].Type)
+	}
+}
+
+func TestFilterByType(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.json")
+	s, _ := Load(path)
+	s.Add(Connection{Name: "srv1", Host: "h1", Port: 22, Type: "ssh"})
+	s.Add(Connection{Name: "win1", Host: "h2", Port: 3389, Type: "rdp"})
+	s.Add(Connection{Name: "desk1", Host: "h3", Port: 5900, Type: "vnc"})
+
+	if got := s.Filter("rdp"); len(got) != 1 || got[0].Name != "win1" {
+		t.Errorf("Filter('rdp') unexpected: %v", got)
+	}
+	if got := s.Filter("vnc"); len(got) != 1 {
+		t.Errorf("Filter('vnc') expected 1, got %d", len(got))
+	}
+}
+
+func TestFilterByDomain(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.json")
+	s, _ := Load(path)
+	s.Add(Connection{Name: "w", Host: "h", Port: 3389, Type: "rdp", Domain: "CORP"})
+	s.Add(Connection{Name: "s", Host: "h2", Port: 22, Type: "ssh"})
+
+	if got := s.Filter("corp"); len(got) != 1 {
+		t.Errorf("Filter('corp') expected 1, got %d", len(got))
+	}
+}
