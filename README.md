@@ -1,4 +1,4 @@
-# julssh ♥
+# julssh
 
 Administrador de conexiones SSH para la terminal. Navegable con flechas y Enter.
 
