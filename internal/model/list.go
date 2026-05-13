@@ -132,12 +132,15 @@ func (m ListModel) View() string {
 
 func formatRow(c store.Connection, width int) string {
 	host := c.Host
-	if c.Port != 0 && c.Port != 22 {
+	defaultPort := map[string]int{"ssh": 22, "rdp": 3389, "vnc": 5900}
+	if c.Port != 0 && c.Port != defaultPort[c.Type] {
 		host = fmt.Sprintf("%s:%d", c.Host, c.Port)
 	}
 	if c.User != "" {
 		host = c.User + "@" + host
 	}
+
+	typeBadge := styles.Tag.Render(strings.ToUpper(c.Type))
 
 	tags := ""
 	for _, t := range c.Tags {
@@ -146,5 +149,5 @@ func formatRow(c store.Connection, width int) string {
 
 	name := fmt.Sprintf("%-20s", c.Name)
 	addr := fmt.Sprintf("%-30s", host)
-	return name + "  " + addr + "  " + tags
+	return typeBadge + " " + name + "  " + addr + "  " + tags
 }
