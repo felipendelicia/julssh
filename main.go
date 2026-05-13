@@ -11,7 +11,15 @@ import (
 	"github.com/felipem/julssh/internal/store"
 )
 
+// version is set at build time by GoReleaser via -X main.version={{.Version}}
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--version" {
+		fmt.Println("julssh", version)
+		os.Exit(0)
+	}
+
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		log.Fatalf("no se puede determinar config dir: %v", err)
