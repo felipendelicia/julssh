@@ -77,6 +77,7 @@ main.go
 - Sin features extra fuera del scope acordado
 - `go test ./...` antes de marcar tarea completa
 - Binario: `julssh`
+- No agregar "Co-Authored-By: Claude" ni ninguna firma de AI en los commits
 
 ## Instalación dev
 
