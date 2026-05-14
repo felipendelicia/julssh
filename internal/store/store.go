@@ -148,11 +148,12 @@ func (s *Store) ExportAll(path string) error {
 	return os.WriteFile(path, data, 0600)
 }
 
-func (s *Store) ImportMerge(path string) (int, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0, err
-	}
+func (s *Store) ExportBytes() ([]byte, error) {
+	f := storeFile{Connections: s.Connections}
+	return json.MarshalIndent(f, "", "  ")
+}
+
+func (s *Store) ImportMergeBytes(data []byte) (int, error) {
 	var f storeFile
 	if err := json.Unmarshal(data, &f); err != nil {
 		return 0, err
@@ -175,6 +176,14 @@ func (s *Store) ImportMerge(path string) (int, error) {
 		return added, s.save()
 	}
 	return 0, nil
+}
+
+func (s *Store) ImportMerge(path string) (int, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	return s.ImportMergeBytes(data)
 }
 
 func matchesQuery(c Connection, q string) bool {

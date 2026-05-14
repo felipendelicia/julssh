@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"path/filepath"
 	"testing"
 )
@@ -225,5 +226,60 @@ func TestImportMerge(t *testing.T) {
 	}
 	if added2 != 0 {
 		t.Errorf("second import should add 0, got %d", added2)
+	}
+}
+
+func TestExportBytes(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Load(filepath.Join(dir, "c.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = s.Add(Connection{Name: "alpha", Host: "host.com", Type: "ssh"})
+
+	data, err := s.ExportBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte(`"alpha"`)) {
+		t.Errorf("expected connection name in output, got: %s", data)
+	}
+	if !bytes.Contains(data, []byte(`"connections"`)) {
+		t.Error("expected 'connections' key in output")
+	}
+}
+
+func TestImportMergeBytes(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Load(filepath.Join(dir, "c.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = s.Add(Connection{Name: "existing", Host: "h1.com", Type: "ssh"})
+	existingID := s.Connections[0].ID
+
+	payload := []byte(`{"connections":[
+		{"id":"brand-new-id","name":"new","host":"h2.com","type":"ssh"},
+		{"id":"` + existingID + `","name":"existing","host":"h1.com","type":"ssh"}
+	]}`)
+
+	added, err := s.ImportMergeBytes(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if added != 1 {
+		t.Errorf("expected 1 added, got %d", added)
+	}
+	if len(s.Connections) != 2 {
+		t.Errorf("expected 2 connections, got %d", len(s.Connections))
+	}
+}
+
+func TestImportMergeBytesBadJSON(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := Load(filepath.Join(dir, "c.json"))
+	_, err := s.ImportMergeBytes([]byte("not json"))
+	if err == nil {
+		t.Error("expected error for invalid JSON")
 	}
 }
