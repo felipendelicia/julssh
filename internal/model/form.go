@@ -18,17 +18,18 @@ const (
 	fieldUser
 	fieldIdentityFile
 	fieldDomain
+	fieldPassword
 	fieldDescription
 	fieldTags
 	fieldCount
 )
 
 var fieldLabels = [fieldCount]string{
-	"Nombre", "Host", "Puerto", "Usuario", "Identity File (SSH)", "Dominio (RDP)", "Descripción", "Tags",
+	"Nombre", "Host", "Puerto", "Usuario", "Identity File (SSH)", "Dominio (RDP)", "Contraseña", "Descripción", "Tags",
 }
 
 var fieldPlaceholders = [fieldCount]string{
-	"Mi servidor", "hostname o IP", "", "usuario", "~/.ssh/id_ed25519", "CORP", "opcional", "tag1, tag2",
+	"Mi servidor", "hostname o IP", "", "usuario", "~/.ssh/id_ed25519", "CORP", "", "opcional", "tag1, tag2",
 }
 
 var portPlaceholders = map[string]string{
@@ -67,6 +68,8 @@ func NewForm(s *store.Store, conn *store.Connection) FormModel {
 		fields[i] = ti
 	}
 	fields[fieldPort].CharLimit = 5
+	fields[fieldPassword].EchoMode = textinput.EchoPassword
+	fields[fieldPassword].EchoCharacter = '•'
 
 	m := FormModel{
 		fields:         fields,
@@ -94,6 +97,7 @@ func NewForm(s *store.Store, conn *store.Connection) FormModel {
 		fields[fieldUser].SetValue(conn.User)
 		fields[fieldIdentityFile].SetValue(conn.IdentityFile)
 		fields[fieldDomain].SetValue(conn.Domain)
+		fields[fieldPassword].SetValue(conn.Password)
 		fields[fieldDescription].SetValue(conn.Description)
 		fields[fieldTags].SetValue(strings.Join(conn.Tags, ", "))
 		m.fields = fields
@@ -116,9 +120,9 @@ func (m *FormModel) updatePortPlaceholder() {
 func (m FormModel) visibleFields() []int {
 	switch m.currentType() {
 	case "rdp":
-		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldDomain, fieldDescription, fieldTags}
+		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldDomain, fieldPassword, fieldDescription, fieldTags}
 	case "vnc":
-		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldDescription, fieldTags}
+		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldPassword, fieldDescription, fieldTags}
 	default:
 		return []int{fieldName, fieldHost, fieldPort, fieldUser, fieldIdentityFile, fieldDescription, fieldTags}
 	}
@@ -252,6 +256,7 @@ func (m FormModel) trySave() (tea.Model, tea.Cmd) {
 		User:         strings.TrimSpace(m.fields[fieldUser].Value()),
 		IdentityFile: strings.TrimSpace(m.fields[fieldIdentityFile].Value()),
 		Domain:       strings.TrimSpace(m.fields[fieldDomain].Value()),
+		Password:     m.fields[fieldPassword].Value(),
 		Description:  strings.TrimSpace(m.fields[fieldDescription].Value()),
 		Tags:         tags,
 	}

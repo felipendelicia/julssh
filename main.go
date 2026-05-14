@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/felipem/julssh/internal/logger"
 	"github.com/felipem/julssh/internal/model"
 	"github.com/felipem/julssh/internal/store"
 )
@@ -25,6 +26,8 @@ func main() {
 		log.Fatalf("no se puede determinar config dir: %v", err)
 	}
 	storePath := filepath.Join(configDir, "julssh", "connections.json")
+	logPath := filepath.Join(configDir, "julssh", "julssh.log")
+	_ = logger.Init(logPath)
 
 	s, err := store.Load(storePath)
 	if err != nil {
