@@ -58,7 +58,7 @@ func (a AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case MsgPushView:
 		a.stack = append(a.stack, msg.View)
-		return a, nil
+		return a, msg.View.Init()
 
 	case MsgPopView:
 		if len(a.stack) > 1 {

@@ -124,6 +124,9 @@ func (m ListModel) handleKey(msg tea.KeyMsg, conns []store.Connection) (tea.Mode
 			added, err := gdrive.Pull(s)
 			return MsgDrivePullDone{Added: added, Err: err}
 		}
+	case "G":
+		view := NewDriveView(m.store)
+		return m, func() tea.Msg { return MsgPushView{View: view} }
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}
@@ -309,7 +312,7 @@ func (m ListModel) View() string {
 	case inputImport:
 		b.WriteString(styles.Footer.Render("Import desde: " + m.pathInput.View() + "  [Enter]confirmar  [Esc]cancelar"))
 	default:
-		footer := "[n]ueva  [e]editar  [c]conectar  [/]filtrar  [X]exportar  [I]importar  [S]Drive↑  [L]Drive↓  [q]salir"
+		footer := "[n]ueva  [e]editar  [c]conectar  [/]filtrar  [X]exportar  [I]importar  [G]Drive  [S]↑  [L]↓  [q]salir"
 		if m.filterMode {
 			footer = fmt.Sprintf("Filtro: %s_  [Esc]cancelar", m.filterQuery)
 		} else if m.filterQuery != "" {
