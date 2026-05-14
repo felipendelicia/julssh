@@ -136,3 +136,94 @@ func TestFilterByDomain(t *testing.T) {
 		t.Errorf("Filter('corp') expected 1, got %d", len(got))
 	}
 }
+
+func TestRecordConnect(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.json")
+	s, _ := Load(path)
+	s.Add(Connection{Name: "srv", Host: "h", Port: 22, Type: "ssh"})
+	id := s.Connections[0].ID
+
+	if s.Connections[0].LastConnectedAt != nil {
+		t.Error("LastConnectedAt should be nil before first connect")
+	}
+	if err := s.RecordConnect(id); err != nil {
+		t.Fatalf("RecordConnect: %v", err)
+	}
+	if s.Connections[0].LastConnectedAt == nil {
+		t.Error("LastConnectedAt should be set after RecordConnect")
+	}
+
+	s2, _ := Load(path)
+	if s2.Connections[0].LastConnectedAt == nil {
+		t.Error("LastConnectedAt should persist after reload")
+	}
+
+	if err := s.RecordConnect("nonexistent"); err != nil {
+		t.Errorf("RecordConnect with unknown ID should not error, got: %v", err)
+	}
+}
+
+func TestExportAll(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.json")
+	s, _ := Load(path)
+	s.Add(Connection{Name: "a", Host: "h1", Port: 22, Type: "ssh"})
+	s.Add(Connection{Name: "b", Host: "h2", Port: 3389, Type: "rdp"})
+
+	exportPath := filepath.Join(t.TempDir(), "export.json")
+	if err := s.ExportAll(exportPath); err != nil {
+		t.Fatalf("ExportAll: %v", err)
+	}
+
+	s2, err := Load(exportPath)
+	if err != nil {
+		t.Fatalf("Load exported file: %v", err)
+	}
+	if len(s2.Connections) != 2 {
+		t.Errorf("exported store should have 2 connections, got %d", len(s2.Connections))
+	}
+}
+
+func TestImportMerge(t *testing.T) {
+	dir := t.TempDir()
+	pathA := filepath.Join(dir, "a.json")
+	pathB := filepath.Join(dir, "b.json")
+
+	sA, _ := Load(pathA)
+	sA.Add(Connection{Name: "one", Host: "h1", Port: 22, Type: "ssh"})
+	sA.Add(Connection{Name: "two", Host: "h2", Port: 22, Type: "ssh"})
+	idOne := sA.Connections[0].ID
+
+	sB, _ := Load(pathB)
+	duplicate := Connection{Name: "one-dup", Host: "hX", Port: 22, Type: "ssh"}
+	sB.Add(duplicate)
+	sB.Connections[0].ID = idOne
+	sB.save()
+	sB.Add(Connection{Name: "three", Host: "h3", Port: 22, Type: "ssh"})
+
+	exportPath := filepath.Join(dir, "b-export.json")
+	sB.ExportAll(exportPath)
+
+	added, err := sA.ImportMerge(exportPath)
+	if err != nil {
+		t.Fatalf("ImportMerge: %v", err)
+	}
+	if added != 1 {
+		t.Errorf("expected 1 new connection added, got %d", added)
+	}
+	if len(sA.Connections) != 3 {
+		t.Errorf("expected 3 connections after merge, got %d", len(sA.Connections))
+	}
+	for _, c := range sA.Connections {
+		if c.Name == "one-dup" {
+			t.Error("duplicate connection (same ID) should not have been imported")
+		}
+	}
+
+	added2, err := sA.ImportMerge(exportPath)
+	if err != nil {
+		t.Fatalf("second ImportMerge: %v", err)
+	}
+	if added2 != 0 {
+		t.Errorf("second import should add 0, got %d", added2)
+	}
+}
