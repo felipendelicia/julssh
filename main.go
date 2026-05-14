@@ -10,6 +10,7 @@ import (
 	"github.com/felipem/julssh/internal/logger"
 	"github.com/felipem/julssh/internal/model"
 	"github.com/felipem/julssh/internal/store"
+	"github.com/felipem/julssh/internal/updater"
 )
 
 // version is set at build time by GoReleaser via -X main.version={{.Version}}
@@ -20,6 +21,8 @@ func main() {
 		fmt.Println("julssh", version)
 		os.Exit(0)
 	}
+
+	updater.Check(version)
 
 	configDir, err := os.UserConfigDir()
 	if err != nil {
