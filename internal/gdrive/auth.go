@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -72,7 +73,9 @@ func GetClient(ctx context.Context, configDir string) (*http.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	_ = saveToken(path, token)
+	if err := saveToken(path, token); err != nil {
+		return nil, fmt.Errorf("save token: %w", err)
+	}
 	return conf.Client(ctx, token), nil
 }
 
@@ -92,18 +95,21 @@ func browserAuth(ctx context.Context, conf *oauth2.Config) (*oauth2.Token, error
 
 	mux := http.NewServeMux()
 	srv := &http.Server{Handler: mux}
+	var once sync.Once
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("state") != state {
-			errCh <- fmt.Errorf("state mismatch")
-			return
-		}
-		code := r.URL.Query().Get("code")
-		if code == "" {
-			errCh <- fmt.Errorf("no code in redirect")
-			return
-		}
-		fmt.Fprintf(w, "<html><body><p>Autenticación exitosa. Podés cerrar esta pestaña.</p></body></html>")
-		codeCh <- code
+		once.Do(func() {
+			if r.URL.Query().Get("state") != state {
+				errCh <- fmt.Errorf("state mismatch")
+				return
+			}
+			code := r.URL.Query().Get("code")
+			if code == "" {
+				errCh <- fmt.Errorf("no code in redirect")
+				return
+			}
+			fmt.Fprintf(w, "<html><body><p>Autenticación exitosa. Podés cerrar esta pestaña.</p></body></html>")
+			codeCh <- code
+		})
 	})
 
 	go func() { _ = srv.Serve(ln) }()
