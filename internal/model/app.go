@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,6 +16,11 @@ import (
 type MsgPushView struct{ View tea.Model }
 type MsgPopView struct{}
 type MsgError struct{ Err error }
+type MsgExportDone struct {
+	Path  string
+	Count int
+}
+type MsgImportDone struct{ Added int }
 
 type msgClearStatus struct{}
 type msgStatusOK struct{ text string }
@@ -100,6 +106,16 @@ func (a AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, clearStatusCmd()
 		}
 		return a, func() tea.Msg { return msgStatusOK{text: "VNC abierto"} }
+
+	case MsgExportDone:
+		return a, func() tea.Msg {
+			return msgStatusOK{text: fmt.Sprintf("Exportado: %d conexiones → %s", msg.Count, msg.Path)}
+		}
+
+	case MsgImportDone:
+		return a, func() tea.Msg {
+			return msgStatusOK{text: fmt.Sprintf("Importado: %d nuevas conexiones", msg.Added)}
+		}
 
 	case tea.WindowSizeMsg:
 		var cmds []tea.Cmd
