@@ -21,6 +21,11 @@ type MsgExportDone struct {
 	Count int
 }
 type MsgImportDone struct{ Added int }
+type MsgDrivePushDone struct{ Err error }
+type MsgDrivePullDone struct {
+	Added int
+	Err   error
+}
 
 type msgClearStatus struct{}
 type msgStatusOK struct{ text string }
@@ -115,6 +120,27 @@ func (a AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MsgImportDone:
 		return a, func() tea.Msg {
 			return msgStatusOK{text: fmt.Sprintf("Importado: %d nuevas conexiones", msg.Added)}
+		}
+
+	case MsgDrivePushDone:
+		if msg.Err != nil {
+			a.statusMsg = "drive: " + msg.Err.Error()
+			a.statusOK = false
+			return a, clearStatusCmd()
+		}
+		return a, func() tea.Msg { return msgStatusOK{text: "Sincronizado con Google Drive ✓"} }
+
+	case MsgDrivePullDone:
+		if msg.Err != nil {
+			a.statusMsg = "drive: " + msg.Err.Error()
+			a.statusOK = false
+			return a, clearStatusCmd()
+		}
+		if msg.Added == 0 {
+			return a, func() tea.Msg { return msgStatusOK{text: "Drive: sin conexiones nuevas"} }
+		}
+		return a, func() tea.Msg {
+			return msgStatusOK{text: fmt.Sprintf("Drive: %d conexiones importadas", msg.Added)}
 		}
 
 	case tea.WindowSizeMsg:

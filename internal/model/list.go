@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/felipem/julssh/internal/gdrive"
 	"github.com/felipem/julssh/internal/store"
 	"github.com/felipem/julssh/internal/styles"
 )
@@ -109,6 +110,20 @@ func (m ListModel) handleKey(msg tea.KeyMsg, conns []store.Connection) (tea.Mode
 		m.pathInput.SetValue("")
 		m.pathInput.Focus()
 		return m, textinput.Blink
+	case "S":
+		s := m.store
+		return m, func() tea.Msg {
+			if err := gdrive.Push(s); err != nil {
+				return MsgDrivePushDone{Err: err}
+			}
+			return MsgDrivePushDone{}
+		}
+	case "L":
+		s := m.store
+		return m, func() tea.Msg {
+			added, err := gdrive.Pull(s)
+			return MsgDrivePullDone{Added: added, Err: err}
+		}
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	}
@@ -294,7 +309,7 @@ func (m ListModel) View() string {
 	case inputImport:
 		b.WriteString(styles.Footer.Render("Import desde: " + m.pathInput.View() + "  [Enter]confirmar  [Esc]cancelar"))
 	default:
-		footer := "[n]ueva  [e]editar  [c]conectar  [/]filtrar  [X]exportar  [I]importar  [q]salir"
+		footer := "[n]ueva  [e]editar  [c]conectar  [/]filtrar  [X]exportar  [I]importar  [S]Drive↑  [L]Drive↓  [q]salir"
 		if m.filterMode {
 			footer = fmt.Sprintf("Filtro: %s_  [Esc]cancelar", m.filterQuery)
 		} else if m.filterQuery != "" {
