@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	clientID     = "YOUR_CLIENT_ID"
-	clientSecret = "YOUR_CLIENT_SECRET"
+	clientID     = "734718020535-oe4h4jf464qr7ch4s6r6922nlperoo9i.apps.googleusercontent.com"
+	clientSecret = "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"
 )
 
 func oauthConfig() *oauth2.Config {
